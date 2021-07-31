@@ -1,0 +1,7 @@
+{
+    "editor.snippetSuggestions": "bottom",
+    "luaide.scriptRoots": [
+        "${workspaceRoot}/service",
+        "${workspaceRoot}/examples/timer"
+    ]
+}

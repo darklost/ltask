@@ -1,0 +1,206 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "dependsOn":[           // 任务依赖，在执行该任务前，需要先执行依赖任务
+                "Create Bin folder"
+            ],
+            "label": "First task",  // 任务名称
+            "type": "shell",        // 任务类型
+            "group": "none",        // 组, 只有3个选项"build", "test", "none", 感觉功能就是用来简化选择用的
+                                    //  build组: 通过Tasks: Run Build Task选择, 也可以通过Tasks: Run Task选择
+                                    //  test组:  通过Tasks: Run Test Task选择, 也可以通过Tasks: Run Task选择
+                                    //  none组:  通过Tasks: Run Task选择，就是显示全部任务
+            "command": "echo",      // 命令
+            "args": [               // 命令参数
+                "Hello, World!"
+            ]
+        },
+
+        /////////////////////////////////////////////
+		// # Creating
+        /////////////////////////////////////////////
+
+        // ## Mac need to create bin folder
+        {
+            "label": "Create Bin folder",
+            "type": "shell",
+            "group": "none",
+            "windows":{             // Window命令
+                "command": "mkdir",
+                "args": [
+                    "-p",
+                    "bin",
+                    ";", // PowerShell command， 不能用"&&"
+                    "echo",
+                    "Create BIN folder."
+                ],
+            },
+			"osx": {                // Mac命令
+                "command": "mkdir",
+                "args": [
+                    "-p",
+                    "bin",
+                    "&&", 
+                    "echo",
+                    "Create BIN folder."
+                ]
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/"     // 指定当前的工作文件夹
+            },
+        },
+
+        /////////////////////////////////////////////
+		// # Cleaning
+        /////////////////////////////////////////////
+
+        // ## Clean build files
+		{
+            "label": "Clean Build folder",
+            "type": "shell",
+            "group": "none",
+			"windows": {
+                "command": "Remove-Item",
+                "args": [
+                    "build",
+                    "-Recurse",
+                    "-Force",
+                    "-Confirm:$false",
+                    ";", 
+                    "echo",
+                    "Cleaning Build folder."
+                ]
+			},
+			"osx": {
+				"command": "rm -f -r build && echo Cleaning Build folder."
+			},
+            "options": {
+                "cwd": "${workspaceFolder}/"
+            },
+        },
+		// ## Clean bin files
+		{
+            "label": "Clean Bin folder",
+            "type": "shell",
+            "group": "none",
+			"windows": {
+                "command": "Remove-Item",
+                "args": [
+                    "bin*",
+                    "-Recurse",
+                    "-Force",
+                    "-Confirm:$false",
+                    ";", 
+                    "echo",
+                    "Cleaning BIN folder."
+                ]
+			},
+			"osx": {
+				"command": "rm -f -r bin* && echo Cleaning BIN folder."
+			},
+            "options": {
+                "cwd": "${workspaceFolder}/"
+            },
+        },
+
+        /////////////////////////////////////////////
+		// # Project files generation(premake5)
+        /////////////////////////////////////////////
+
+        // ## VS2019
+        {
+            "label": "Generate build files (VS2019)",
+            "type": "shell",
+            "group": "none",
+            "command": "premake5 vs2019"
+        },     
+        
+        // ## XCode
+        {
+           "label": "Generate build files (XCode)",
+           "type": "shell",
+           "group": "none",
+           "command": "premake5 xcode4"
+        },
+
+        /////////////////////////////////////////////
+		// # Project files build
+        /////////////////////////////////////////////
+
+        // ## VS2019
+        {
+            "dependsOn":[
+                "Generate build files (VS2019)"
+            ],
+
+            "label": "Build (VS2019)",
+            "type": "shell",
+            "group": "build",
+            "command": "msbuild", //需要通过Visual Studio命令行打开, 比如(x64_x86 Cross Tools Command Prompt for VS 2019)
+            "args": [
+                "../ltask.sln",
+				"/m",
+				"/property:Configuration=${input:buildConfigVS2019}",   // Configuration: Debug or Release
+				"/property:Platform=x64",      // Platform: x86 or x64
+				// Ask msbuild to generate full paths for file names.
+				"/property:GenerateFullPaths=true",
+                "/t:build"
+               
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "problemMatcher": ["$msCompile"],//捕捉编译时编译器在终端里显示的报错信息
+            "presentation": {
+				"reveal": "silent" // Reveal the output only if unrecognized errors occur.
+			}
+        },
+        // ## XCode
+        {
+            "dependsOn":[           // 任务依赖，在执行该任务前，需要先执行依赖任务
+                "Create Bin folder",
+                "Generate build files (XCode)"
+            ],
+
+            "label": "Build (XCode)",
+            "type": "shell",
+            "group": "build",
+            "command": "xcodebuild",
+            "args": [
+                "-workspace",
+                "../ltask.xcworkspace",
+                "-scheme", 
+                "${input:buildProject}",
+                "-configuration",
+                "${input:buildConfigXCode}",
+                "-arch",
+                "x86_64",
+            ],
+            "options": {
+              "cwd": "${workspaceFolder}/build"
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ],
+
+    "inputs": [
+   
+        {
+            "id": "buildConfigVS2019",
+            "description": "Select build config for VS2019:",
+            "default": "Debug",
+            "type": "pickString",
+            "options": ["Debug", "Release"]
+		},
+        {
+            "id": "buildConfigXCode",
+            "description": "Select build config for XCode:",
+            "default": "Debug",
+            "type": "pickString",
+            "options": ["Debug", "Release"]
+		}
+    ]
+}
